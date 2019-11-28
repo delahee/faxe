@@ -9,10 +9,13 @@ class Channel {
 	var started 	= true;
 	var paused 		= false;
 	
+	public var COUNT= 0;
+	
 	public inline function new( data : cpp.Pointer<FmodChannel> ){
 		this.data = cast data.ref;
 		started = true;
 		paused = false;
+		COUNT++;
 	}
 	
 	public function getData(){
@@ -41,6 +44,7 @@ class Channel {
 		if (disposed) return;
 		disposed = true;
 		data = null;
+		COUNT--;
 	}
 	
 	public inline function isPlaying(){
@@ -409,6 +413,10 @@ class Snd {
 		#end
 		Faxe.fmod_init( 256 );
 		fmodSystem = FaxeRef.getSystem();
+	}
+	
+	public static function release(){
+		Faxe.fmod_release();
 	}
 	
 	public static function setGlobalVolume(vol:Float) {

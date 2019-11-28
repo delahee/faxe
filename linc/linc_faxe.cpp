@@ -68,6 +68,20 @@ namespace linc
 			fmodSoundSystem->getLowLevelSystem(&fmodLowLevelSoundSystem);
 			if(faxe_debug) printf("FMOD Sound System Started with %d channels!\n", numChannels);
 		}
+		
+		void faxe_close(){
+			fmodLowLevelSoundSystem->close();
+		}
+		
+		void faxe_release(){
+			
+			loadedBanks.clear();
+			loadedSounds.clear();
+			loadedEvents.clear();
+			
+			fmodSoundSystem->release();
+			fmodLowLevelSoundSystem->release();
+		}
 
 		void faxe_update()
 		{
@@ -112,7 +126,7 @@ namespace linc
 
 		FMOD::Sound* faxe_get_sound(const ::String& sndName) {
 			if (loadedSounds.find(sndName) == loadedSounds.end()){
-				if(faxe_debug) printf("not loaded \n");
+				if(faxe_debug) printf("%s was not loaded...\n",sndName.c_str());
 				return nullptr;
 			}
 			return loadedSounds[sndName];

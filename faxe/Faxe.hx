@@ -12,6 +12,12 @@ extern class Faxe
 {
 	@:native("linc::faxe::faxe_init")
 	public static function fmod_init(numChannels:Int = 128):Void;
+	
+	@:native("linc::faxe::faxe_close")
+	public static function fmod_close():Void;
+	
+	@:native("linc::faxe::faxe_release")
+	public static function fmod_release():Void;
 
 	@:native("linc::faxe::faxe_update")
 	public static function fmod_update():Void;
@@ -366,9 +372,7 @@ class FaxeRef {
 		return cast null;
 	}
 	
-	public static function playSoundWithHandle(snd:FmodSoundRef, ?paused : Bool = false) 
-		: cpp.Pointer<FmodChannel> 
-	{
+	public static function playSoundWithHandle(snd:FmodSoundRef, ?paused : Bool = false) : FmodChannelRef {
 		var fmod : FmodSystemRef = getSystem();
 		
 		var cgroup : cpp.Pointer<FmodChannelGroup> = nullptr();
@@ -377,7 +381,6 @@ class FaxeRef {
 		
 		//Reference are actually pointers !
 		var sndPtr : cpp.Pointer<FmodSound> = cast snd;
-		
 		var res = fmod.playSound( sndPtr, cgroup, paused, chanPtr );
 		
 		if ( res != FMOD_OK ){
@@ -387,7 +390,7 @@ class FaxeRef {
 			return null;
 		}
 		
-		return cpp.Pointer.fromRaw(chan);
+		return cast cpp.Pointer.fromRaw(chan).ref;
 	}
 	
 	@:extern

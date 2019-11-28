@@ -45,6 +45,16 @@ namespace linc
 		 */
 		extern void faxe_init(int numChannels = 32);
 
+		/**
+		 * closes fmod, beware for dangling objects must be released
+		 */
+		extern void faxe_close();
+		
+		/**
+		 * closes fmod and release resources
+		 */
+		extern void faxe_release();
+		
 		extern void faxe_set_debug(bool onOff);
 		
 		/**
