@@ -1,6 +1,10 @@
 package faxe;
 
+import cpp.NativeGc;
+
 private typedef Ptr<T> = cpp.Pointer<T>;
+private typedef RawPtr<T> = cpp.RawPointer<T>;
+typedef FmodEventList = cpp.RawPointer<cpp.RawPointer<FmodStudioEventDescription>>;
 
 @:keep
 @:include('linc_faxe.h')
@@ -73,6 +77,9 @@ extern class Faxe
 	@:native("linc::faxe::faxe_get_system")
 	public static function fmod_get_system() : cpp.Pointer<FmodSystem>;
 	
+	@:native("linc::faxe::faxe_get_studio_system")
+	public static function fmod_get_studio_system() : cpp.Pointer<FmodStudioSystem>;
+	
 	@:native("linc::faxe::faxe_set_debug")
 	public static function fmod_set_debug(onOff : Bool):Void;
 }
@@ -86,6 +93,65 @@ extern class Faxe
 	var FTM_MODORDER 	= 0x00000100;
 	var FTM_MODROW		= 0x00000200;
 	var FTM_MODPATTERN 	= 0x00000400;
+}
+
+@:enum abstract FmodBankInitFlags(Int) from Int to Int {
+	var FSBANK_INIT_NORMAL                            = 0x0;
+	var FSBANK_INIT_IGNOREERRORS                      = 0x1;
+	var FSBANK_INIT_WARNINGSASERRORS                  = 0x2;
+	var FSBANK_INIT_CREATEINCLUDEHEADER               = 0x4;
+	var FSBANK_INIT_DONTLOADCACHEFILES                = 0x8;
+	var FSBANK_INIT_GENERATEPROGRESSITEMS             = 0x10;
+}
+
+@:enum abstract FmodBankBuilFlags(Int) from Int to Int {
+	var FSBANK_BUILD_DEFAULT                   = 0x0;
+	var FSBANK_BUILD_DISABLESYNCPOINTS         = 0x1;
+	var FSBANK_BUILD_DONTLOOP                  = 0x2;
+	var FSBANK_BUILD_FILTERHIGHFREQ            = 0x4;
+	var FSBANK_BUILD_DISABLESEEKING            = 0x8;
+	var FSBANK_BUILD_OPTIMIZESAMPLERATE        = 0x10;
+	var FSBANK_BUILD_FSB5_DONTWRITENAMES       = 0x80;
+	var FSBANK_BUILD_NOGUID             	   = 0x100;
+	var FSBANK_BUILD_WRITEPEAKVOLUME           = 0x200;
+	//var FSBANK_BUILD_OVERRIDE_MASK             = 0x10;
+	//var FSBANK_BUILD_CACHE_VALIDATION_MASK     = 0x10;
+}
+
+@:enum abstract FmodStudioLoadingState(Int) from Int to Int {
+	var FMOD_STUDIO_LOADING_STATE_UNLOADING = 0;
+	var FMOD_STUDIO_LOADING_STATE_UNLOADED = 1;
+	var FMOD_STUDIO_LOADING_STATE_LOADING = 2;
+	var FMOD_STUDIO_LOADING_STATE_LOADED = 3; 
+	var FMOD_STUDIO_LOADING_STATE_ERROR = 4;   
+}
+
+@:enum abstract FmodStudioLoadBank(Int) from Int to Int {
+	var FMOD_STUDIO_LOAD_BANK_NORMAL                =0x00000000;         	
+	var FMOD_STUDIO_LOAD_BANK_NONBLOCKING           =0x00000001;
+	var FMOD_STUDIO_LOAD_BANK_DECOMPRESS_SAMPLES    =0x00000001;
+}
+
+
+/*
+@:enum abstract FmodStudioLoadMemoryMode(Int) from Int to Int {
+	var FMOD_STUDIO_LOAD_MEMORY                = 0x00000000;         	
+	var FMOD_STUDIO_LOAD_MEMORY_POINT          = 0x00000001;
+}
+*/
+
+@:keep
+@:include('linc_faxe.h')
+@:native("FMOD_STUDIO_LOAD_MEMORY_MODE")
+extern class FmodStudioLoadMemoryMode {
+	
+	static inline function getMemoryCopy():FmodStudioLoadMemoryMode{
+		return untyped __cpp__("FMOD_STUDIO_LOAD_MEMORY");
+	}
+	
+	static inline function getMemoryPoint():FmodStudioLoadMemoryMode{
+		return untyped __cpp__("FMOD_STUDIO_LOAD_MEMORY_POINT");
+	}
 }
 
 @:enum abstract FmodResult(Int) from Int to Int {
@@ -250,6 +316,50 @@ extern class FmodChannelGroup {
 extern class FmodSoundRef extends FmodSound {}
 
 @:include('linc_faxe.h')
+@:native("FMOD::Studio::Bank")
+extern class FmodStudioBank {
+	
+	@:native('unload')
+	function unload() : FmodResult;
+	
+	@:native('getLoadingState')
+	function getLoadingState( state : cpp.Pointer<FmodStudioLoadingState>) : FmodResult;
+	
+	@:native('getSampleLoadingState')
+	function getSampleLoadingState(state : cpp.Pointer<Int>): FmodResult;
+	
+	@:native('getStringCount')
+	function getStringCount(cont : cpp.Pointer<Int>): FmodResult;
+	
+	@:native('isValid')
+	function isValid(): Bool;
+	
+	@:native('loadSampleData')
+	function loadSampleData(): FmodResult;
+	
+	@:native('unloadSampleData')
+	function unloadSampleData(): FmodResult;
+	
+	@:native('getEventCount')
+	function getEventCount(cont : cpp.Pointer<Int>): FmodResult;
+	
+	@:native('getEventList')
+	function getEventList(
+		array : cpp.RawPointer<cpp.RawPointer<FmodStudioEventDescription>>,
+		capacity:Int,
+		cont : cpp.Pointer<Int>
+	): FmodResult;
+	
+}
+
+@:keep
+@:include('linc_faxe.h')
+@:native("::cpp::Reference<FMOD::Studio::Bank>") 
+extern class FmodStudioBankRef extends FmodStudioBank {
+	
+}
+
+@:include('linc_faxe.h')
 @:native("FMOD::Channel")
 extern class FmodChannel {
 	
@@ -334,6 +444,10 @@ extern class FmodSystem {
 		paused 			: Bool,
 		channel			: cpp.RawPointer<cpp.RawPointer<FmodChannel>>
 	) : FmodResult;
+	
+	
+	
+	
 }
 
 @:keep
@@ -343,10 +457,123 @@ extern class FmodSystemRef extends FmodSystem {}
 
 @:keep
 @:include('linc_faxe.h')
+@:native("FMOD::Studio::EventDescription")
+extern class FmodStudioEventDescription{
+	
+	
+	//not sure it works at all
+	/*
+	public inline function path() : String {
+		var path : Array<cpp.Char> = cpp.NativeArray.create( 513 );
+		var cnt = 0;
+		_getPath( cpp.NativeArray.address(path, 0).raw, 512, Cpp.addr(cnt));
+		path[cnt] = 0;
+		return cpp.NativeString.fromPointerLen( cpp.NativeArray.address(path,0), cnt+1 );
+	}
+	*/
+	
+	@:native("getPath")
+	function _getPath( path:RawPtr<cpp.Char>, size:Int, retrieved:Ptr<Int> ) : FmodResult;
+
+	@:native("createInstance")
+	function _createInstance(
+		instance : cpp.RawPointer<cpp.RawPointer<FmodStudioEventInstance>>
+	) : FmodResult;
+	
+	inline function createInstance() : FmodStudioEventInstanceRef {
+		var inst : cpp.RawPointer<FmodStudioEventInstance> = cast 0;
+		var res = _createInstance(Cpp.rawAddr(inst));
+		if ( res != FMOD_OK ){
+			return null;
+		}else {
+			return cast cpp.Pointer.fromRaw(inst).ref;
+		}
+	};
+}
+
+@:keep
+@:include('linc_faxe.h')
+@:native("::cpp::Pointer<FMOD::Studio::EventDescription>") 
+extern class FmodStudioEventDescriptionPtr extends FmodStudioEventDescription {}
+
+@:keep
+@:include('linc_faxe.h')
+@:native("::cpp::Reference<FMOD::Studio::EventDescription>") 
+extern class FmodStudioEventDescriptionRef extends FmodStudioEventDescription {}
+
+
+@:keep
+@:include('linc_faxe.h')
+@:native("FMOD::Studio::EventInstance")
+extern class FmodStudioEventInstance{
+
+	@:native("start")
+	function start() : FmodResult;
+	
+	@:native("release")
+	function release() : FmodResult;
+}
+
+@:keep
+@:include('linc_faxe.h')
+@:native("::cpp::Reference<FMOD::Studio::EventInstance>") 
+extern class FmodStudioEventInstanceRef extends FmodStudioEventInstance {}
+
+@:keep
+@:include('linc_faxe.h')
+@:native("FMOD::Studio::System")
+extern class FmodStudioSystem {
+	@:native('loadBankFile')
+	function loadBankFile( filename : cpp.ConstCharStar, loadFlags:Int, bank : cpp.RawPointer<cpp.RawPointer<FmodStudioBank>>  ) : FmodResult;
+	
+	@:native('loadBankMemory')
+	function loadBankMemory( 
+		data : cpp.ConstCharStar, 
+		size:Int, 
+		mode : FmodStudioLoadMemoryMode, 
+		loadFlags:Int, 
+		bank : cpp.RawPointer<cpp.RawPointer<FmodStudioBank>>  ) : FmodResult;
+	
+	@:native('getEvent')
+	function _getEvent( path : cpp.ConstCharStar, desc : cpp.RawPointer<cpp.RawPointer<FmodStudioEventDescription>>
+		) : FmodResult;
+		
+		
+	public inline function getEvent( path : String ) : FmodStudioEventDescriptionRef{
+		var desc : cpp.RawPointer<FmodStudioEventDescription> = cast 0;
+		var res = _getEvent( cpp.ConstCharStar.fromString(path), Cpp.rawAddr(desc ));
+		if ( res != FMOD_OK ){
+			#if debug
+			trace("getEvent failed :"+path);
+			#end
+			return null;
+		}
+		if ( desc == null)
+			return null;
+		return cast cpp.Pointer.fromRaw(desc).ref;
+	}
+}
+
+
+
+@:keep
+@:include('linc_faxe.h')
+@:native("::cpp::Reference<FMOD::Studio::System>") 
+extern class FmodStudioSystemRef extends FmodStudioSystem {}
+
+@:keep
+@:include('linc_faxe.h')
+@:cppFileCode("#include \"linc_faxe.h\"\n#include <hx/GC.h>\n")
 class FaxeRef {
 	@:extern
 	public static inline function getSystem() : FmodSystemRef{
 		var ptr : cpp.Pointer<FmodSystem> = Faxe.fmod_get_system();
+		return cast ptr.ref;
+	}
+	
+	@:extern
+	public static inline function getStudioSystem() : FmodStudioSystemRef{
+		var ptr : cpp.Pointer<FmodStudioSystem> = Faxe.fmod_get_studio_system();
 		return cast ptr.ref;
 	}
 	
@@ -397,6 +624,45 @@ class FaxeRef {
 	public static inline function getSound(name:String) : FmodSoundRef {
 		var ptr : cpp.Pointer<FmodSound> = Faxe.fmod_get_sound(name);
 		return cast ptr.ref;
+	}
+	
+	
+	public static function getEventNameList( bnk : FmodStudioBankRef, cnt:Int ) : Array<String>{
+		var arrRes : Array<String> = [];
+		untyped __cpp__('
+			
+			FMOD::Studio::Bank * bank = {1};
+			int nb = {0};
+			FMOD::Studio::EventDescription ** arr =  (FMOD::Studio::EventDescription **) malloc( cnt * sizeof(FMOD::Studio::EventDescription * ) );
+			int nbDone = 0;
+			bnk->getEventList(arr, nb, & nbDone);
+			char label[512];
+			for ( int i = 0; i < cnt;++i ){
+				int strl = 0;
+				arr[i]->getPath(label, 511, &strl);
+				{2}->push( ::String(label,strl).dup() );
+			}
+			free(arr);
+		',cnt, bnk,arrRes);
+		return arrRes;
+	}
+	
+	public static function showEventList( bnk : FmodStudioBankRef, cnt:Int )  {
+		untyped __cpp__('
+			FMOD::Studio::Bank * bank = {1};
+			int nb = {0};
+			FMOD::Studio::EventDescription ** arr = (FMOD::Studio::EventDescription ** ) malloc( cnt * sizeof(FMOD::Studio::EventDescription * ) );
+			int nbDone = 0;
+			bnk->getEventList(arr, nb, &nbDone);
+			
+			for ( int i = 0; i < nbDone;++i){
+				char label[512];
+				int strl = 0;
+				arr[i]->getPath(label, 511, &strl);
+				printf("%s\\n", label);
+			}
+			free(arr);
+		',cnt, bnk);
 	}
 	
 	public static function fmodResultToString( rs: FmodResult ){
@@ -494,3 +760,4 @@ class FaxeRef {
 extern class FmodCreateSoundExInfo {
 	
 }
+

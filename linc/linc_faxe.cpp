@@ -52,6 +52,10 @@ namespace linc
 		FMOD::System* faxe_get_system(){
 			return fmodLowLevelSoundSystem;
 		}
+		
+		FMOD::Studio::System* faxe_get_studio_system(){
+			return fmodSoundSystem;
+		}
 
 		//// FMOD Init
 		void faxe_init(int numChannels)

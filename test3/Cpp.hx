@@ -1,4 +1,5 @@
 typedef Ptr<T> = cpp.Pointer<T>;
+typedef RawPtr<T> = cpp.RawPointer<T>;
 
 @:keep
 class Cpp {
@@ -7,6 +8,12 @@ class Cpp {
 	@:extern
 	public static inline function addr<T>( a : T ){
 		return cpp.Pointer.addressOf(a);
+	}
+	
+	@:generic
+	@:extern
+	public static inline function rawAddr<T>( a : T ){
+		return cpp.RawPointer.addressOf(a);
 	}
 	
 	@:generic
@@ -25,6 +32,12 @@ class Cpp {
 		return cpp.ConstCharStar.fromString(str);
 	}
 	
+	public static function bytesToConstCharStar(bytes:haxe.io.Bytes){
+		var bd = bytes.getData();
+		var cs : cpp.ConstCharStar = cast 0;
+		untyped __cpp__("{0} = (const char * )({1})", cs, cpp.NativeArray.getBase(bd).getBase());
+		return cs;
+	}
 	
 	
 }

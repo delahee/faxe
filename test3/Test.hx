@@ -1,7 +1,10 @@
 import faxe.Faxe;
 import Cpp;
 
+import cpp.Stdlib;
 import SndTV;
+
+using cpp.NativeArray;
 
 class Test{
 	
@@ -264,7 +267,7 @@ class Test{
 			}
 		}
 		
-		if ( true ){
+		if ( false ){
 			var file = "win/snd/music/Hell_master.ogg";
 			var fmod = FaxeRef.getSystem();
 			trace("fm init mem:\t" + Snd.dumpMemory());
@@ -293,12 +296,93 @@ class Test{
 			}
 		}
 		
+		if ( false ){
+			var bnk = Snd.loadSingleBank("Master Bank.bank");
+			if ( null==bnk ) trace("no such bank 0");
+			var bnk = Snd.loadSingleBank("Master Bank.strings.bank");
+			if ( null==bnk ) trace("no such bank 1");
+			var bnk = Snd.loadSingleBank("Musics.bank");
+			if ( null==bnk ) trace("no such bank 2");
+		}
+		
+		if ( true ){
+			var bnk = Snd.loadSingleBankMem("Master Bank.bank");
+			if ( null == bnk ) trace("no such bank 0");
+			
+			var t0 = haxe.Timer.stamp();
+			var load = bnk.loadSampleData();
+			var t1 = haxe.Timer.stamp();
+			trace("time to loadSamples " + (t1 - t0) + "s");
+			var bnkMaster = bnk;
+			
+			var bnk = Snd.loadSingleBankMem("Master Bank.strings.bank");
+			if ( null == bnk ) trace("no such bank 1");
+			var t0 = haxe.Timer.stamp();
+			var load = bnk.loadSampleData();
+			var t1 = haxe.Timer.stamp();
+			trace("time to loadSamples " + (t1 - t0) + "s");
+			var bnkStrings = bnk;
+			
+			
+			var bnk = Snd.loadSingleBankMem("Musics.bank");
+			if ( null == bnk ) trace("no such bank 2");
+			
+			var t0 = haxe.Timer.stamp();
+			var load = bnk.loadSampleData();
+			var t1 = haxe.Timer.stamp();
+			trace("time to loadSamples " + (t1 - t0) + "s");
+			
+			
+			var cnt = 0;
+			var evRes:FmodResult = bnk.getEventCount( Cpp.addr(cnt ));
+			
+			//FaxeRef.showEventList( bnk, cnt );
+			
+			var l : Array<String> = FaxeRef.getEventNameList( bnk, cnt );
+			trace(cnt + "<>" + l.length);
+			var i = 0;
+			for ( name in l ){
+				trace(i+" :"+name);
+			}
+			
+			//bnk.
+			/*
+			trace("allocating: " + cnt);
+			var l : cpp.RawPointer<FmodStudioEventDescription> = untyped __cpp__("(FMOD::Studio::EventDescription*) malloc({0} * sizeof(void*))", cnt);
+			var lAddr : cpp.RawPointer<cpp.RawPointer<FmodStudioEventDescription>>= Cpp.rawAddr(l);
+			var evDone = 0;
+			var res  = bnk.getEventList( lAddr, cnt, Cpp.addr(evDone)  );
+			if ( res != FMOD_OK){
+				trace("err:" + res);
+			}
+			trace("done:" + evDone);
+			var lPtr = cpp.Pointer.fromRaw(l);
+			for ( i in 0...cnt ){
+				var oneElem : cpp.Pointer<FmodStudioEventDescription> = lPtr.add(i);
+				var oneElemRef : FmodStudioEventDescriptionRef = cast oneElem.ref;
+				trace(">"+oneElemRef.path()+"<");
+			}
+			*/
+			var ss = FaxeRef.getStudioSystem();
+			var ev = ss.getEvent( "event:/accuser_nodrums" );
+			if ( ev == null){
+				trace("no such event");
+			}
+			else {
+				trace("got one");
+				var inst = ev.createInstance();
+				inst.start();
+			}
+		}
+		
 		var h = new haxe.Timer( 15);
 		h.run = function(){
 			Snd.update();
 			//trace("update");
 		}
 	}
+	
+	
 	
 	
 }

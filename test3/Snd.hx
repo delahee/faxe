@@ -1,6 +1,7 @@
 import faxe.Faxe;
 
 import SndTV;
+using StringTools;
 
 class Channel {
 	public var 		data : FmodChannelRef 	= null;
@@ -11,8 +12,8 @@ class Channel {
 	
 	public var COUNT= 0;
 	
-	public inline function new( data : cpp.Pointer<FmodChannel> ){
-		this.data = cast data.ref;
+	public inline function new( data : FmodChannelRef ){
+		this.data = data;
 		started = true;
 		paused = false;
 		COUNT++;
@@ -163,7 +164,7 @@ class Sound {
 	}
 	
 	public function play( ?offsetMs : Float = 0.0, ?nbLoops:Int = 1, ?volume:Float = 1.0, ?pan:Float = 0.0 ) : Channel{
-		var nativeChan : cpp.Pointer<FmodChannel> = FaxeRef.playSoundWithHandle( data , false);
+		var nativeChan : FmodChannelRef = FaxeRef.playSoundWithHandle( data , false);
 		var chan = new Channel( nativeChan );
 		
 		chan.setPlayCursorMs( offsetMs );
@@ -566,5 +567,67 @@ class Snd {
 			}
 		TW.update();
 		Faxe.fmod_update();
+	}
+	
+	public static function loadSingleBank( filename : String ) : Null<faxe.Faxe.FmodStudioBankRef>{
+		
+		if ( filename.endsWith(".fsb")) return null;//old fmod format is not supported
+		
+		var t0 = haxe.Timer.stamp();
+		var fsys = FaxeRef.getStudioSystem();
+		var fbank : cpp.RawPointer < FmodStudioBank > = cast 0;
+		
+		trace("trying to load " + filename);
+		
+		var result = fsys.loadBankFile( 
+			cpp.ConstCharStar.fromString( filename ), 
+			FmodStudioLoadBank.FMOD_STUDIO_LOAD_BANK_NORMAL, 
+			cpp.RawPointer.addressOf(fbank));
+			
+		if (result != FMOD_OK)	{
+			trace("FMOD failed to LOAD sound bank with errcode:"+result+" errmsg:"+FaxeRef.fmodResultToString(result)+"\n");
+			return null;
+		}
+		else 
+			trace("loading...");
+			
+		var t1 = haxe.Timer.stamp();
+		trace("time to load bank:" + (t1 - t0));
+		return cast fbank;
+	}
+	
+	public static function loadSingleBankMem( filename : String ) : Null<faxe.Faxe.FmodStudioBankRef>{
+		var t0 = haxe.Timer.stamp();
+		var bytes = sys.io.File.getBytes(filename);
+		var t1 = haxe.Timer.stamp();
+		trace("time to load to memory:" + (t1 - t0)+"s");
+		
+		if ( bytes == null ) return null;
+		
+		var cdata : cpp.ConstCharStar = Cpp.bytesToConstCharStar(bytes);
+		
+		var t0 = haxe.Timer.stamp();
+		var fsys = FaxeRef.getStudioSystem();
+		var fbank : cpp.RawPointer < FmodStudioBank > = cast 0;
+		
+		trace("trying to load " + filename);
+		
+		var result = fsys.loadBankMemory( 
+			cdata, 
+			bytes.length,
+			FmodStudioLoadMemoryMode.getMemoryCopy(),//internal copy 
+			cast FmodStudioLoadBank.FMOD_STUDIO_LOAD_BANK_NORMAL, 
+			cpp.RawPointer.addressOf(fbank));
+			
+		if (result != FMOD_OK)	{
+			trace("FMOD failed to LOAD sound bank with errcode:"+result+" errmsg:"+FaxeRef.fmodResultToString(result)+"\n");
+			return null;
+		}
+		else 
+			trace("loading...");
+			
+		var t1 = haxe.Timer.stamp();
+		trace("time to load bank:" + (t1 - t0));
+		return cast fbank;
 	}
 }

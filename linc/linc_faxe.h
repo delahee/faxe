@@ -162,6 +162,7 @@ namespace linc
 		extern bool faxe_channel_playing(int channelID);
 		
 		extern FMOD::System* faxe_get_system();
+		extern FMOD::Studio::System* faxe_get_studio_system();
 
 	} // faxe + fmod namespace
 } // linc namespace
