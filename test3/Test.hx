@@ -1,10 +1,50 @@
 import faxe.Faxe;
-import Cpp;
+
 
 import cpp.Stdlib;
 import SndTV;
 
 using cpp.NativeArray;
+
+
+
+private class Cpp {
+	
+	@:generic
+	@:extern
+	public static inline function addr<T>( a : T ){
+		return cpp.Pointer.addressOf(a);
+	}
+	
+	@:generic
+	@:extern
+	public static inline function rawAddr<T>( a : T ){
+		return cpp.RawPointer.addressOf(a);
+	}
+	
+	@:generic
+	@:extern
+	public static inline function nullptr<T>() : cpp.Pointer<T> {
+		return cast null;
+	}
+	
+	@:generic
+	@:extern
+	public static inline function ref<T>( a : cpp.Pointer<T> ) {
+		return cast a.ref;
+	}
+	
+	public static inline function cstring( str : String ) : cpp.ConstCharStar {
+		return cpp.ConstCharStar.fromString(str);
+	}
+	
+	public static function bytesToConstCharStar(bytes:haxe.io.Bytes){
+		var bd = bytes.getData();
+		var cs : cpp.ConstCharStar = cast 0;
+		untyped __cpp__("{0} = (const char * )({1})", cs, cpp.NativeArray.getBase(bd).getBase());
+		return cs;
+	}
+}
 
 class Test{
 	
@@ -336,33 +376,13 @@ class Test{
 			var cnt = 0;
 			var evRes:FmodResult = bnk.getEventCount( Cpp.addr(cnt ));
 			
-			//FaxeRef.showEventList( bnk, cnt );
-			
-			var l : Array<String> = FaxeRef.getEventNameList( bnk, cnt );
+			var l : Array<String> = FaxeRef.getEventList( bnk, cnt );
 			trace(cnt + "<>" + l.length);
 			var i = 0;
 			for ( name in l ){
 				trace(i+" :"+name);
 			}
 			
-			//bnk.
-			/*
-			trace("allocating: " + cnt);
-			var l : cpp.RawPointer<FmodStudioEventDescription> = untyped __cpp__("(FMOD::Studio::EventDescription*) malloc({0} * sizeof(void*))", cnt);
-			var lAddr : cpp.RawPointer<cpp.RawPointer<FmodStudioEventDescription>>= Cpp.rawAddr(l);
-			var evDone = 0;
-			var res  = bnk.getEventList( lAddr, cnt, Cpp.addr(evDone)  );
-			if ( res != FMOD_OK){
-				trace("err:" + res);
-			}
-			trace("done:" + evDone);
-			var lPtr = cpp.Pointer.fromRaw(l);
-			for ( i in 0...cnt ){
-				var oneElem : cpp.Pointer<FmodStudioEventDescription> = lPtr.add(i);
-				var oneElemRef : FmodStudioEventDescriptionRef = cast oneElem.ref;
-				trace(">"+oneElemRef.path()+"<");
-			}
-			*/
 			var ss = FaxeRef.getStudioSystem();
 			var ev = ss.getEvent( "event:/accuser_nodrums" );
 			if ( ev == null){

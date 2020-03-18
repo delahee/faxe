@@ -6,6 +6,44 @@ private typedef Ptr<T> = cpp.Pointer<T>;
 private typedef RawPtr<T> = cpp.RawPointer<T>;
 typedef FmodEventList = cpp.RawPointer<cpp.RawPointer<FmodStudioEventDescription>>;
 
+private class Cpp {
+	
+	@:generic
+	@:extern
+	public static inline function addr<T>( a : T ){
+		return cpp.Pointer.addressOf(a);
+	}
+	
+	@:generic
+	@:extern
+	public static inline function rawAddr<T>( a : T ){
+		return cpp.RawPointer.addressOf(a);
+	}
+	
+	@:generic
+	@:extern
+	public static inline function nullptr<T>() : cpp.Pointer<T> {
+		return cast null;
+	}
+	
+	@:generic
+	@:extern
+	public static inline function ref<T>( a : cpp.Pointer<T> ) {
+		return cast a.ref;
+	}
+	
+	public static inline function cstring( str : String ) : cpp.ConstCharStar {
+		return cpp.ConstCharStar.fromString(str);
+	}
+	
+	public static function bytesToConstCharStar(bytes:haxe.io.Bytes){
+		var bd = bytes.getData();
+		var cs : cpp.ConstCharStar = null;
+		untyped __cpp__("{0} = (const char * )({1})", cs, cpp.NativeArray.getBase(bd).getBase());
+		return cs;
+	}
+}
+
 @:keep
 @:include('linc_faxe.h')
 #if !display
@@ -118,6 +156,7 @@ extern class Faxe
 	//var FSBANK_BUILD_CACHE_VALIDATION_MASK     = 0x10;
 }
 
+/*
 @:enum abstract FmodStudioLoadingState(Int) from Int to Int {
 	var FMOD_STUDIO_LOADING_STATE_UNLOADING = 0;
 	var FMOD_STUDIO_LOADING_STATE_UNLOADED = 1;
@@ -125,6 +164,7 @@ extern class Faxe
 	var FMOD_STUDIO_LOADING_STATE_LOADED = 3; 
 	var FMOD_STUDIO_LOADING_STATE_ERROR = 4;   
 }
+*/
 
 @:enum abstract FmodStudioLoadBank(Int) from Int to Int {
 	var FMOD_STUDIO_LOAD_BANK_NORMAL                =0x00000000;         	
@@ -142,13 +182,31 @@ extern class Faxe
 
 @:keep
 @:include('linc_faxe.h')
+@:native("FMOD_STUDIO_LOADING_STATE")
+extern class FmodStudioLoadingState {
+	
+	@:extern
+	static inline function error() : FmodStudioLoadingState{
+		return untyped __cpp__('FMOD_STUDIO_LOADING_STATE_ERROR');
+	}
+	
+	@:extern
+	inline function isLoaded() : Bool {
+		return untyped __cpp__('{0} == FMOD_STUDIO_LOADING_STATE_LOADED',this);
+	}
+}
+
+@:keep
+@:include('linc_faxe.h')
 @:native("FMOD_STUDIO_LOAD_MEMORY_MODE")
 extern class FmodStudioLoadMemoryMode {
 	
+	@:extern
 	static inline function getMemoryCopy():FmodStudioLoadMemoryMode{
 		return untyped __cpp__("FMOD_STUDIO_LOAD_MEMORY");
 	}
 	
+	@:extern
 	static inline function getMemoryPoint():FmodStudioLoadMemoryMode{
 		return untyped __cpp__("FMOD_STUDIO_LOAD_MEMORY_POINT");
 	}
@@ -325,6 +383,7 @@ extern class FmodStudioBank {
 	@:native('getLoadingState')
 	function getLoadingState( state : cpp.Pointer<FmodStudioLoadingState>) : FmodResult;
 	
+	
 	@:native('getSampleLoadingState')
 	function getSampleLoadingState(state : cpp.Pointer<Int>): FmodResult;
 	
@@ -460,17 +519,21 @@ extern class FmodSystemRef extends FmodSystem {}
 @:native("FMOD::Studio::EventDescription")
 extern class FmodStudioEventDescription{
 	
+	@:native("getLength")
+	function getLength(lenMs:Ptr<Int>):FmodResult;
 	
-	//not sure it works at all
-	/*
-	public inline function path() : String {
-		var path : Array<cpp.Char> = cpp.NativeArray.create( 513 );
-		var cnt = 0;
-		_getPath( cpp.NativeArray.address(path, 0).raw, 512, Cpp.addr(cnt));
-		path[cnt] = 0;
-		return cpp.NativeString.fromPointerLen( cpp.NativeArray.address(path,0), cnt+1 );
-	}
-	*/
+	@:native("isOneshot")
+	function isOneshot(onesho:Ptr<Bool>):FmodResult;
+	
+	@:native("getSampleLoadingState")
+	function getSampleLoadingState(loadingState:Ptr<FmodStudioLoadingState>):FmodResult;
+	
+	//don't use at will as it will increment the ref counter
+	@:native("loadSampleData")
+	function loadSampleData():FmodResult;
+	
+	@:native("unloadSampleData")
+	function unloadSampleData():FmodResult;
 	
 	@:native("getPath")
 	function _getPath( path:RawPtr<cpp.Char>, size:Int, retrieved:Ptr<Int> ) : FmodResult;
@@ -481,7 +544,7 @@ extern class FmodStudioEventDescription{
 	) : FmodResult;
 	
 	inline function createInstance() : FmodStudioEventInstanceRef {
-		var inst : cpp.RawPointer<FmodStudioEventInstance> = cast 0;
+		var inst : cpp.RawPointer<FmodStudioEventInstance> = null;
 		var res = _createInstance(Cpp.rawAddr(inst));
 		if ( res != FMOD_OK ){
 			return null;
@@ -489,6 +552,12 @@ extern class FmodStudioEventDescription{
 			return cast cpp.Pointer.fromRaw(inst).ref;
 		}
 	};
+	
+	inline function isLoaded():Bool{
+		var loadingState:FmodStudioLoadingState = FmodStudioLoadingState.error();
+		getSampleLoadingState( Cpp.addr(loadingState));
+		return loadingState.isLoaded();
+	}
 }
 
 @:keep
@@ -540,11 +609,11 @@ extern class FmodStudioSystem {
 		
 		
 	public inline function getEvent( path : String ) : FmodStudioEventDescriptionRef{
-		var desc : cpp.RawPointer<FmodStudioEventDescription> = cast 0;
+		var desc : cpp.RawPointer<FmodStudioEventDescription> = null;
 		var res = _getEvent( cpp.ConstCharStar.fromString(path), Cpp.rawAddr(desc ));
 		if ( res != FMOD_OK ){
 			#if debug
-			trace("getEvent failed :"+path);
+			trace("getEvent failed : "+path+" err:"+FaxeRef.fmodResultToString(res) );
 			#end
 			return null;
 		}
@@ -626,24 +695,50 @@ class FaxeRef {
 		return cast ptr.ref;
 	}
 	
-	
-	public static function getEventNameList( bnk : FmodStudioBankRef, cnt:Int ) : Array<String>{
+	public static function getEventList( bnk : FmodStudioBankRef ) : Array<String>{
 		var arrRes : Array<String> = [];
+		var cnt : Int = 0;
+		var res = bnk.getEventCount( cpp.Pointer.addressOf(cnt) );
+		if ( res != FMOD_OK) {
+			trace( fmodResultToString(res ));
+			return arrRes;
+		}
+		if ( null==bnk){
+			trace("no bank given");
+			return arrRes ;
+		}
+		
+		trace("scanned for " + cnt + " events");
+		var fmodRes = 0;
+		
 		untyped __cpp__('
-			
 			FMOD::Studio::Bank * bank = {1};
 			int nb = {0};
-			FMOD::Studio::EventDescription ** arr =  (FMOD::Studio::EventDescription **) malloc( cnt * sizeof(FMOD::Studio::EventDescription * ) );
+			
+			printf("trying to fetch : %d\\n", nb);
+			size_t allocSize = cnt * sizeof(FMOD::Studio::EventDescription * );
+			FMOD::Studio::EventDescription ** arr =  (FMOD::Studio::EventDescription **) malloc( allocSize );
 			int nbDone = 0;
-			bnk->getEventList(arr, nb, & nbDone);
-			char label[512];
-			for ( int i = 0; i < cnt;++i ){
-				int strl = 0;
-				arr[i]->getPath(label, 511, &strl);
-				{2}->push( ::String(label,strl).dup() );
+			{3} = bnk->getEventList(arr, nb, &nbDone);
+			if ( {3} != FMOD_OK ){
+				printf("fmod res: %d\\n", fmodRes);
 			}
-			free(arr);
-		',cnt, bnk,arrRes);
+			else {
+				printf("nbDone: %d\\n", nbDone);
+				char label[512];
+				for ( int i = 0; i < nbDone;++i ){
+					int strl = 0;
+					{3} = arr[i]->getPath(label, 511, &strl);
+					{2}->push( ::String(label,strl+1).dup() );
+				}
+				free(arr);
+			}
+		',cnt, bnk,arrRes,fmodRes);
+		
+		if ( fmodRes != FMOD_OK )
+			trace("fmod err:" + fmodResultToString(fmodRes));
+		else 
+			trace("event list retrieved");
 		return arrRes;
 	}
 	
@@ -665,6 +760,11 @@ class FaxeRef {
 		',cnt, bnk);
 	}
 	
+	@:extern
+	public static inline function getMemoryAlign() : Int {
+		return untyped __cpp__("FMOD_STUDIO_LOAD_MEMORY_ALIGNMENT");
+	}
+	
 	public static function fmodResultToString( rs: FmodResult ){
 		return 
 		switch(rs){
@@ -679,6 +779,7 @@ class FaxeRef {
 			case FMOD_ERR_DSP_INUSE										: "FMOD_ERR_DSP_INUSE";
 			case FMOD_ERR_DSP_NOTFOUND									: "FMOD_ERR_DSP_NOTFOUND";
 			case FMOD_ERR_DSP_RESERVED									: "FMOD_ERR_DSP_RESERVED";
+			
 			case FMOD_ERR_DSP_SILENCE									: "FMOD_ERR_DSP_SILENCE";
 			case FMOD_ERR_DSP_TYPE										: "FMOD_ERR_DSP_TYPE";
 			case FMOD_ERR_FILE_BAD										: "FMOD_ERR_FILE_BAD";
@@ -690,6 +791,7 @@ class FaxeRef {
 			case FMOD_ERR_FORMAT										: "FMOD_ERR_FORMAT";
 			case FMOD_ERR_HEADER_MISMATCH								: "FMOD_ERR_HEADER_MISMATCH";
 			case FMOD_ERR_HTTP											: "FMOD_ERR_HTTP";
+			
 			case FMOD_ERR_HTTP_ACCESS									: "FMOD_ERR_HTTP_ACCESS";
 			case FMOD_ERR_HTTP_PROXY_AUTH								: "FMOD_ERR_HTTP_PROXY_AUTH";
 			case FMOD_ERR_HTTP_SERVER_ERROR								: "FMOD_ERR_HTTP_SERVER_ERROR";
@@ -701,6 +803,7 @@ class FaxeRef {
 			case FMOD_ERR_INVALID_HANDLE								: "FMOD_ERR_INVALID_HANDLE";
 			case FMOD_ERR_INVALID_PARAM									: "FMOD_ERR_INVALID_PARAM";
 			case FMOD_ERR_INVALID_POSITION								: "FMOD_ERR_INVALID_POSITION";
+			
 			case FMOD_ERR_INVALID_SPEAKER								: "FMOD_ERR_INVALID_SPEAKER";
 			case FMOD_ERR_INVALID_SYNCPOINT								: "FMOD_ERR_INVALID_SYNCPOINT";
 			case FMOD_ERR_INVALID_THREAD								: "FMOD_ERR_INVALID_THREAD";
