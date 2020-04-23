@@ -56,6 +56,10 @@ namespace linc
 		FMOD::Studio::System* faxe_get_studio_system(){
 			return fmodSoundSystem;
 		}
+		
+		static void showErr(FMOD_RESULT err){
+			printf("FMOD #%d error msg:%s\n", err, FMOD_ErrorString(err));
+		}
 
 		//// FMOD Init
 		void faxe_init(int numChannels)
@@ -83,9 +87,22 @@ namespace linc
 			loadedSounds.clear();
 			loadedEvents.clear();
 			
-			fmodSoundSystem->release();
-			fmodLowLevelSoundSystem->release();
+			FMOD_RESULT res3 = fmodSoundSystem->unloadAll();
+			if( res3 != FMOD_OK)	printf("fss unload all not ok %d\n",res3);
+			
+			FMOD_RESULT res0 = fmodSoundSystem->release();
+			if( res0 != FMOD_OK)	printf("fss release not ok %d\n",res0);
+			
+			FMOD_RESULT res1 = fmodLowLevelSoundSystem->release();
+			if( res1 != FMOD_OK)	{
+				printf("flss release not ok %d\n",res1);
+				showErr(res1);
+			}
+			
+			printf("faxe released\n");
 		}
+		
+		
 
 		void faxe_update()
 		{

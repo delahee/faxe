@@ -212,6 +212,20 @@ extern class FmodStudioLoadMemoryMode {
 	}
 }
 
+@:keep
+@:include('linc_faxe.h')
+@:native("FMOD_STUDIO_STOP_MODE")
+extern class FmodStudioStopMode {
+	
+	@:extern
+	static inline function StopAllowFadeout():FmodStudioStopMode
+		return untyped __cpp__("FMOD_STUDIO_STOP_ALLOWFADEOUT");
+	
+	@:extern
+	static inline function StopImmediate():FmodStudioStopMode
+		return untyped __cpp__("FMOD_STUDIO_STOP_IMMEDIATE");
+}
+
 @:enum abstract FmodResult(Int) from Int to Int {
 	var FMOD_OK													= 0;
 	var FMOD_ERR_BADCOMMAND										= 1;
@@ -506,6 +520,9 @@ extern class FmodSystem {
 	
 	
 	
+	@:native('getCPUUsage')
+	function getCPUUsage( usage : cpp.RawPointer<FmodStudioCpuUsage> ):FmodResult;
+	
 	
 }
 
@@ -513,6 +530,36 @@ extern class FmodSystem {
 @:include('linc_faxe.h')
 @:native("::cpp::Reference<FMOD::System>") 
 extern class FmodSystemRef extends FmodSystem {}
+
+@:keep
+@:include('linc_faxe.h')
+@:native("FMOD_STUDIO_ADVANCEDSETTINGS")
+extern class FmodStudioAdvanceSettings{
+	var cbsize : Int;
+	var commandqueuesize : cpp.UInt32;
+	var handleinitialsize : cpp.UInt32;
+	var studioupdateperiod : Int;
+	var idlesampledatapoolsize : Int;
+	var streamingscheduledelay : cpp.UInt32;
+}
+
+@:keep
+@:include('linc_faxe.h')
+@:native("FMOD_STUDIO_CPU_USAGE")
+extern class FmodStudioCpuUsage{
+	var dspusage:cpp.Float32;
+	var streamusage:cpp.Float32;
+	var geometryusage:cpp.Float32;
+	var updateusage:cpp.Float32;
+	var studiousage:cpp.Float32;
+}
+
+@:keep
+@:include('linc_faxe.h')
+@:native("::cpp::Struct<FMOD_STUDIO_CPU_USAGE>")
+extern class FmodStudioCpuUsageStruct extends FmodStudioCpuUsage{
+	
+}
 
 @:keep
 @:include('linc_faxe.h')
@@ -558,6 +605,9 @@ extern class FmodStudioEventDescription{
 		getSampleLoadingState( Cpp.addr(loadingState));
 		return loadingState.isLoaded();
 	}
+	
+	@:native("releaseAllInstances")
+	function releaseAllInstances():FmodStudioEventInstanceRef;
 }
 
 @:keep
@@ -579,8 +629,31 @@ extern class FmodStudioEventInstance{
 	@:native("start")
 	function start() : FmodResult;
 	
+	@:native("stop")
+	function stop( mode:FmodStudioStopMode ) : FmodResult;
+	
 	@:native("release")
 	function release() : FmodResult;
+	
+	@:native("getVolume")
+	function getVolume(volume:Ptr<cpp.Float32>, finalvolume:Ptr<cpp.Float32>) : FmodResult;
+	
+	@:native("setVolume")
+	function setVolume(volume:Float) : FmodResult;
+	
+	@:native("getPaused")
+	function getPaused(paused:Ptr<Bool>) : FmodResult;
+	
+	@:native("setPaused")
+	function setPaused(paused:Bool) : FmodResult;
+	
+	@:native("getTimelinePosition")
+	function getTimelinePosition(position:Ptr<Int>) : FmodResult;
+	
+	@:native("setTimelinePosition")
+	function setTimelinePosition(position:Int) : FmodResult;
+	
+	
 }
 
 @:keep
@@ -621,6 +694,12 @@ extern class FmodStudioSystem {
 			return null;
 		return cast cpp.Pointer.fromRaw(desc).ref;
 	}
+	
+	@:native('flushCommands')
+	function flushCommands():FmodResult;
+	
+	@:native('flushSampleLoading')
+	function flushSampleLoading():FmodResult;
 }
 
 
